@@ -118,25 +118,42 @@ export async function continueThread(messages: ChatCompletionRequestMessage[], m
  * @param messages The message history the response is created for.
  * @param functions Function calls which can be called by the openAI model
  */
-export async function createChatCompletion(messages: ChatCompletionRequestMessage[], functions: ChatCompletionFunctions[] | undefined = undefined): Promise<ChatCompletionResponseMessage | undefined> {
-    const chatCompletionOptions: CreateChatCompletionRequest = {
-        model: model,
-        messages: messages,
-        max_tokens: max_tokens,
-        temperature: temperature,
-    }
-    if(functions) {
-        chatCompletionOptions.functions = functions
-        chatCompletionOptions.function_call = 'auto'
-    }
+export async function createChatCompletion(
+  messages: ChatCompletionRequestMessage[],
+  functions: ChatCompletionFunctions[] | undefined = undefined
+): Promise<ChatCompletionResponseMessage | undefined> {
+  // Use a flexible type (any) for extra properties such as tools.
+  const chatCompletionOptions: any = {
+    model: model,
+    messages: messages,
+    max_tokens: max_tokens,
+    temperature: temperature,
+  };
 
-    log.trace({chatCompletionOptions})
+  if (functions) {
+    chatCompletionOptions.functions = functions;
+    chatCompletionOptions.function_call = 'auto';
+  }
 
-    const chatCompletion = await openai.createChatCompletion(chatCompletionOptions)
+  // Conditionally include the web search tool if ENABLE_WEB_SEARCH is set to "true".
+  if (process.env.ENABLE_WEB_SEARCH === "true") {
+    chatCompletionOptions.tools = [{
+      type: "web_search_preview",
+      search_context_size: process.env.SEARCH_CONTEXT_SIZE || "medium",
+      user_location: {
+        country: process.env.SEARCH_USER_COUNTRY || "US",
+        city: process.env.SEARCH_USER_CITY || "New York",
+        region: process.env.SEARCH_USER_REGION || "NY"
+      }
+      // Optionally, add:
+      // tool_choice: { type: "web_search_preview" }
+    }];
+  }
 
-    log.trace({chatCompletion})
-
-    return chatCompletion.data?.choices?.[0]?.message
+  log.trace({ chatCompletionOptions });
+  const chatCompletion = await openai.createChatCompletion(chatCompletionOptions);
+  log.trace({ chatCompletion });
+  return chatCompletion.data?.choices?.[0]?.message;
 }
 
 /**
