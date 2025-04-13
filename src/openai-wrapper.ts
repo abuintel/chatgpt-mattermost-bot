@@ -122,7 +122,7 @@ export async function createChatCompletion(
   messages: ChatCompletionRequestMessage[],
   functions: ChatCompletionFunctions[] | undefined = undefined
 ): Promise<ChatCompletionResponseMessage | undefined> {
-  // Use a flexible type (any) for extra properties such as tools.
+  // Use a flexible type to allow extra properties such as tools.
   const chatCompletionOptions: any = {
     model: model,
     messages: messages,
@@ -130,12 +130,13 @@ export async function createChatCompletion(
     temperature: temperature,
   };
 
-  if (functions) {
+  // Only include function call settings if not using the GPT-4o-search-preview model
+  if (functions && model !== "gpt-4o-search-preview") {
     chatCompletionOptions.functions = functions;
     chatCompletionOptions.function_call = 'auto';
   }
 
-  // Conditionally include the web search tool if ENABLE_WEB_SEARCH is set to "true".
+  // Conditionally include the web search tool if enabled.
   if (process.env.ENABLE_WEB_SEARCH === "true") {
     chatCompletionOptions.tools = [{
       type: "web_search_preview",
@@ -145,7 +146,7 @@ export async function createChatCompletion(
         city: process.env.SEARCH_USER_CITY || "New York",
         region: process.env.SEARCH_USER_REGION || "NY"
       }
-      // Optionally, add:
+      // Optionally, to force the search, include:
       // tool_choice: { type: "web_search_preview" }
     }];
   }
